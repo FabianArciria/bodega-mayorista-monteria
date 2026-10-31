@@ -9,6 +9,7 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   role: UserRole;
+  isAuthenticated: boolean;
   isLoading: boolean;
   isConfigured: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; role?: UserRole }>;
@@ -72,17 +73,27 @@ const DEMO_PROFILES: Record<UserRole, Profile> = {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(DEMO_PROFILES.client);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<UserRole>('client');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
   const isConfigured = isSupabaseConfigured();
 
   useEffect(() => {
     if (!isConfigured) {
-      // Modo Demo Local: Leer rol demo guardado o usar 'client'
-      const savedDemoRole = (localStorage.getItem('demo_selected_role') as UserRole) || 'client';
-      setRole(savedDemoRole);
-      setProfile(DEMO_PROFILES[savedDemoRole]);
+      // Modo Demo Local: Verificar si hay sesión explícita iniciada
+      const sessionActive = localStorage.getItem('bmm_session_active') === 'true';
+      const savedDemoRole = localStorage.getItem('demo_selected_role') as UserRole | null;
+
+      if (sessionActive && savedDemoRole && DEMO_PROFILES[savedDemoRole]) {
+        setRole(savedDemoRole);
+        setProfile(DEMO_PROFILES[savedDemoRole]);
+        setIsAuthenticated(true);
+      } else {
+        setRole('client');
+        setProfile(null);
+        setIsAuthenticated(false);
+      }
       setIsLoading(false);
       return;
     }
@@ -95,6 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           setUser(session.user);
+          setIsAuthenticated(true);
           // Consultar perfil
           const { data: profileData } = await supabase
             .from('profiles')
@@ -106,6 +118,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(profileData as Profile);
             setRole(profileData.role as UserRole);
           }
+        } else {
+          setUser(null);
+          setProfile(null);
+          setIsAuthenticated(false);
         }
       } catch (err) {
         console.error('Error cargando usuario de Supabase:', err);
@@ -120,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setUser(session.user);
+        setIsAuthenticated(true);
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
@@ -133,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setUser(null);
         setProfile(null);
+        setIsAuthenticated(false);
         setRole('client');
       }
       setIsLoading(false);
@@ -156,7 +174,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setRole(simulatedRole);
       setProfile(DEMO_PROFILES[simulatedRole]);
+      setIsAuthenticated(true);
       localStorage.setItem('demo_selected_role', simulatedRole);
+      localStorage.setItem('bmm_session_active', 'true');
       setIsLoading(false);
       return { success: true, role: simulatedRole };
     }
@@ -170,6 +190,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (data.user) {
+      setIsAuthenticated(true);
+      localStorage.setItem('bmm_session_active', 'true');
       const { data: prof } = await supabase
         .from('profiles')
         .select('*')
@@ -213,6 +235,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setProfile(newProf);
       setRole('client');
+      setIsAuthenticated(true);
+      localStorage.setItem('demo_selected_role', 'client');
+      localStorage.setItem('bmm_session_active', 'true');
       setIsLoading(false);
       return { success: true };
     }
@@ -235,6 +260,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) {
       return { success: false, error: error.message };
     }
+    setIsAuthenticated(true);
+    localStorage.setItem('bmm_session_active', 'true');
     return { success: true };
   };
 
@@ -246,13 +273,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setProfile(null);
     setRole('client');
+    setIsAuthenticated(false);
     localStorage.removeItem('demo_selected_role');
+    localStorage.removeItem('bmm_session_active');
   };
 
   const switchDemoRole = (newRole: UserRole) => {
     setRole(newRole);
     setProfile(DEMO_PROFILES[newRole]);
+    setIsAuthenticated(true);
     localStorage.setItem('demo_selected_role', newRole);
+    localStorage.setItem('bmm_session_active', 'true');
   };
 
   return (
@@ -261,6 +292,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         profile,
         role,
+        isAuthenticated,
         isLoading,
         isConfigured,
         login,

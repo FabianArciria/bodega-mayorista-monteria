@@ -14,6 +14,7 @@ import {
   saveStoredZones, 
   DATA_CHANGED_EVENT 
 } from '@/lib/data-store';
+import LoginGate from '@/components/auth/LoginGate';
 import { 
   Search, 
   Sparkles, 
@@ -30,7 +31,7 @@ import {
 } from 'lucide-react';
 
 export default function HomePage() {
-  const { role, isConfigured } = useAuth();
+  const { role, isConfigured, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [zones, setZones] = useState<Zone[]>(INITIAL_ZONES);
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
@@ -137,6 +138,19 @@ export default function HomePage() {
       return [savedProduct, ...prev];
     });
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Si no ha iniciado sesión, mostrar primero el Inicio de Sesión / Portal de Ingreso
+  if (!isAuthenticated) {
+    return <LoginGate />;
+  }
 
   return (
     <div className="min-h-screen pb-16">

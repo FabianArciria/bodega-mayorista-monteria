@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 export default function Navbar() {
-  const { role, profile, logout, switchDemoRole, isConfigured } = useAuth();
+  const { role, profile, isAuthenticated, logout, switchDemoRole, isConfigured } = useAuth();
   const { totalItems, setIsCartOpen } = useCart();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
@@ -74,7 +74,7 @@ export default function Navbar() {
             </Link>
 
             {/* Solo visible para Personal Autorizado (Admin y Trabajadores) */}
-            {(isWorker || isAdmin) && (
+            {isAuthenticated && (isWorker || isAdmin) && (
               <Link
                 href="/worker"
                 className="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 transition-colors flex items-center gap-1.5"
@@ -85,7 +85,7 @@ export default function Navbar() {
             )}
 
             {/* Solo visible para el Administrador */}
-            {isAdmin && (
+            {isAuthenticated && isAdmin && (
               <Link
                 href="/admin"
                 className="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-purple-300 bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 transition-colors flex items-center gap-1.5"
@@ -100,35 +100,44 @@ export default function Navbar() {
           <div className="flex items-center gap-2 sm:gap-3">
             
             {/* Estado del Usuario y Menú */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
-                  isAdmin 
-                    ? 'bg-purple-950/40 text-purple-200 border-purple-500/40 hover:bg-purple-900/40' 
-                    : isWorker
-                    ? 'bg-amber-950/40 text-amber-200 border-amber-500/40 hover:bg-amber-900/40'
-                    : 'bg-zinc-900 text-zinc-200 border-zinc-800 hover:border-zinc-700'
-                }`}
+            {!isAuthenticated ? (
+              <Link
+                href="/login"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-950/40 transition-all hover:scale-105 active:scale-95"
               >
-                <span className={`w-2 h-2 rounded-full ${
-                  isAdmin ? 'bg-purple-400 shadow-sm shadow-purple-500' :
-                  isWorker ? 'bg-amber-400 shadow-sm shadow-amber-500' :
-                  'bg-emerald-400 shadow-sm shadow-emerald-500'
-                }`} />
+                <Lock className="w-3.5 h-3.5" />
+                <span>Ingresar</span>
+              </Link>
+            ) : (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                    isAdmin 
+                      ? 'bg-purple-950/40 text-purple-200 border-purple-500/40 hover:bg-purple-900/40' 
+                      : isWorker
+                      ? 'bg-amber-950/40 text-amber-200 border-amber-500/40 hover:bg-amber-900/40'
+                      : 'bg-zinc-900 text-zinc-200 border-zinc-800 hover:border-zinc-700'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${
+                    isAdmin ? 'bg-purple-400 shadow-sm shadow-purple-500' :
+                    isWorker ? 'bg-amber-400 shadow-sm shadow-amber-500' :
+                    'bg-emerald-400 shadow-sm shadow-emerald-500'
+                  }`} />
 
-                <div className="text-left hidden sm:block">
-                  <span className="block text-[11px] font-extrabold leading-tight">
-                    {profile?.company_name || profile?.full_name || 'Mi Cuenta'}
-                  </span>
-                  <span className="block text-[9px] uppercase tracking-wider text-zinc-400 font-semibold">
-                    {isAdmin ? '🛡️ Administrador' : isWorker ? '📦 Encargado' : '🛒 Comprador Mayorista'}
-                  </span>
-                </div>
+                  <div className="text-left hidden sm:block">
+                    <span className="block text-[11px] font-extrabold leading-tight">
+                      {profile?.company_name || profile?.full_name || 'Mi Cuenta'}
+                    </span>
+                    <span className="block text-[9px] uppercase tracking-wider text-zinc-400 font-semibold">
+                      {isAdmin ? '🛡️ Administrador' : isWorker ? '📦 Encargado' : '🛒 Comprador Mayorista'}
+                    </span>
+                  </div>
 
-                <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
-              </button>
+                  <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+                </button>
 
               {/* Dropdown de Usuario con Permisos y Acciones */}
               {profileDropdownOpen && (
@@ -223,6 +232,7 @@ export default function Navbar() {
                 </div>
               )}
             </div>
+          )}
 
             {/* Botón Carrito de Compras */}
             <button
